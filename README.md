@@ -15,6 +15,8 @@ POSTALK 백엔드와 같은 Railway 프로젝트 및 환경에 Docker 서비스�
 
 상태 확인은 `GET /healthz`입니다. 백엔드는 `POST /cardnews/renders`에 작업 ID, 테마, 가게 정보, 역할별 다운로드 URL 6개, PNG 업로드 URL 3개를 보냅니다. 백엔드가 서명 URL을 발급하고 최종 결과를 보관함에 등록합니다.
 
+백엔드와 이 서비스 사이의 전체 요청 흐름과 배포 점검 순서는 [POSTALK 백엔드 연동 안내](docs/backend-integration.md)에 정리했습니다.
+
 ## 내부 API
 
 이 서비스는 프론트엔드가 직접 호출하지 않습니다. POSTALK 백엔드만 `x-cardnews-api-key` 헤더로 호출합니다.
