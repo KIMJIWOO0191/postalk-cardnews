@@ -15,6 +15,54 @@ POSTALK 백엔드와 같은 Railway 프로젝트 및 환경에 Docker 서비스�
 
 상태 확인은 `GET /healthz`입니다. 백엔드는 `POST /cardnews/renders`에 작업 ID, 테마, 가게 정보, 역할별 다운로드 URL 6개, PNG 업로드 URL 3개를 보냅니다. 백엔드가 서명 URL을 발급하고 최종 결과를 보관함에 등록합니다.
 
+## 내부 API
+
+이 서비스는 프론트엔드가 직접 호출하지 않습니다. POSTALK 백엔드만 `x-cardnews-api-key` 헤더로 호출합니다.
+
+| 메서드·경로 | 인증 | 설명 |
+| --- | --- | --- |
+| `GET /healthz` | 없음 | Railway 상태 확인. `{ "status": "ok" }`를 반환합니다. |
+| `POST /cardnews/renders` | `x-cardnews-api-key` | 사진 6장으로 카드뉴스 PNG 3장을 생성합니다. |
+
+### `POST /cardnews/renders`
+
+```json
+{
+  "job_id": "생성 작업 UUID",
+  "theme": "christmas",
+  "store_name": "가게 이름",
+  "area": "시장 또는 지역",
+  "menu_name": "대표 메뉴",
+  "direction": "따뜻한 겨울 조명과 빨간 포인트",
+  "photos": [
+    { "role": "bowl", "download_url": "Supabase 서명 다운로드 URL" },
+    { "role": "zoom", "download_url": "..." },
+    { "role": "food1", "download_url": "..." },
+    { "role": "food2", "download_url": "..." },
+    { "role": "store1", "download_url": "..." },
+    { "role": "store2", "download_url": "..." }
+  ],
+  "uploads": ["PNG 1 업로드 URL", "PNG 2 업로드 URL", "PNG 3 업로드 URL"]
+}
+```
+
+- `theme`: `minimal` 또는 `christmas`
+- 사진 역할 6개는 빠짐없이 한 번씩만 있어야 하며, 같은 파일을 재사용할 수 없습니다.
+- 입력과 출력 URL은 같은 Supabase `uploads` 버킷의 유효한 서명 URL만 허용합니다.
+- 생성 결과는 1080×1350 PNG 3장입니다.
+
+성공하면 카드별 Storage 경로와 바이트 수, 사용한 템플릿 키를 반환합니다.
+
+```json
+{
+  "cards": [{ "key": "stores/.../generated/job-1.png", "bytes": 123456 }],
+  "template": "x1",
+  "fallback": false
+}
+```
+
+`401`은 내부 키 불일치, `400`은 입력 URL·사진 역할·출력 경로 오류, `502`는 렌더링 또는 Storage 전송 실패입니다. 서명 URL과 내부 키는 로그나 클라이언트에 노출하지 않습니다.
+
 ### 로컬 검증
 
 ```powershell
