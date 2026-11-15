@@ -77,7 +77,7 @@
 ## 5. Railway 배포와 점검
 
 1. 이 저장소를 Railway의 별도 Docker 서비스로 연결한다.
-2. 서비스에 `SUPABASE_URL`, `CARDNEWS_INTERNAL_API_KEY`, `PORT=8000`을 설정한다.
+2. 서비스에 `SUPABASE_URL`, `CARDNEWS_INTERNAL_API_KEY`, `OPENAI_API_KEY`, `PORT=8000`을 설정한다. `OPENAI_API_KEY`는 백엔드 서비스의 같은 이름 변수를 Railway 참조로 연결한다.
 3. 백엔드에 `CARDNEWS_API_URL=http://postalk-cardnews.railway.internal:8000`과 동일한 `CARDNEWS_INTERNAL_API_KEY`를 설정한다.
 4. 백엔드 DB에 카드뉴스 촬영 슬롯 마이그레이션을 적용한다.
 5. 카드뉴스 서비스 로그에서 컨테이너 기동과 `GET /healthz` 성공을 확인한다.
