@@ -27,6 +27,7 @@ class CardNewsRenderTest(unittest.TestCase):
     def body(self, theme="minimal", cards=4):
         return {
             "job_id": self.job_id, "theme": theme, "store_name": "떡집 </script>", "menu_name": "쑥떡",
+            "store_address": "시장로 15", "menu_details": [{"name": "쑥떡", "description": "현미, 쑥으로 만들어요."}],
             "photos": [
                 {"role": role, "download_url": f"{self.project}/storage/v1/object/sign/uploads/{role}.jpg?token=test"}
                 for role in api.design.PHOTO_ROLES
@@ -102,6 +103,7 @@ class CardNewsRenderTest(unittest.TestCase):
                 self.assertEqual(response.json()["template"], template)
                 self.assertEqual(len(uploads), count)
                 self.assertIn("쑥떡", response.json()["caption"])
+                self.assertIn("시장로 15", response.json()["caption"])
                 self.assertIn("#쑥떡", response.json()["hashtags"])
                 for card in response.json()["cards"]:
                     image = uploads[card["key"]]

@@ -253,7 +253,8 @@ def ask_gpt(client, text, shop=None, models=None, profile=None, force=None, them
     s = {**SHOP, **(shop or {})}
     own = ''
     if s.get('desc') or s.get('menus'):
-        own = ('사장님 입력(사실로 써도 됨): 소개 "' + str(s.get('desc') or '').strip() + '" / 메뉴 ' + ', '.join(str(m) for m in (s.get('menus') or []) if m) + '\n')
+        owner_menus = s.get('menu_details') or s.get('menus') or []
+        own = '사장님 입력(사실로 써도 됨): ' + json.dumps({'소개': s.get('desc') or '', '메뉴': owner_menus}, ensure_ascii=False) + '\n'
     user = (f'가게: {s["name"]} ({s["area"]})\n{own}{_profile_line(profile)}\n'
             + (f'고정 템플릿: {force}\n' if force else '') + f'손님 말: "{(text or "").strip()}"')
     last = None
@@ -330,7 +331,7 @@ def caption_footer(shop=None):
     s = {**SHOP, **(shop or {})}
     lines = [f'📍 {s["name"]}'.strip()]
     for k in ('address', 'hours'):
-        v = _re.sub(r'\s+', ' ', str(s.get(k) or '')).strip()[:100]
+        v = _re.sub(r'\s+', ' ', str(s.get(k) or '')).strip()[:200 if k == 'address' else 100]
         if v: lines.append(v)
     if len(lines) == 1 and s.get('area'):
         lines.append(str(s['area']).strip()[:60])
@@ -381,7 +382,8 @@ def clean_caption(raw, shop=None, profile=None, theme='minimal'):
 
 def _owner_text(shop=None):
     s = {**SHOP, **(shop or {})}
-    return ' '.join([str(s.get('desc') or '')] + [str(m) for m in (s.get('menus') or [])] + [str(s.get(k) or '') for k in ('name', 'area', 'address', 'hours')])
+    descriptions = [str(menu.get('description') or '') for menu in (s.get('menu_details') or [])]
+    return ' '.join([str(s.get('desc') or '')] + [str(m) for m in (s.get('menus') or [])] + descriptions + [str(s.get(k) or '') for k in ('name', 'area', 'address', 'hours')])
 
 def _banned(text, shop=None):
     """금지 표현이 있나? 단, 사장님이 직접 입력한 문장/메뉴에 있던 말(예: '20년째', '1위')은 사실로 보고 통과."""

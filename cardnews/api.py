@@ -28,6 +28,11 @@ class Photo(BaseModel):
     download_url: str = Field(max_length=4096)
 
 
+class MenuDetail(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    description: str = Field(default="", max_length=300)
+
+
 class RenderRequest(BaseModel):
     job_id: UUID
     theme: Literal["minimal", "christmas"] = "minimal"
@@ -35,7 +40,9 @@ class RenderRequest(BaseModel):
     area: str = Field(default="", max_length=200)
     menu_name: str = Field(default="", max_length=200)
     store_description: str = Field(default="", max_length=500)
+    store_address: str = Field(default="", max_length=200)
     menus: list[str] = Field(default_factory=list, max_length=3)
+    menu_details: list[MenuDetail] = Field(default_factory=list, max_length=3)
     direction: str = Field(default="", max_length=500)
     photos: list[Photo] = Field(min_length=6, max_length=6)
     uploads: list[str] = Field(min_length=3, max_length=4)
@@ -131,6 +138,7 @@ def render_steps(body: RenderRequest, destinations: list[str]):
             for photo in body.photos:
                 download_image(client, photo.download_url, photos[photo.role])
             shop = {"name": body.store_name, "area": body.area, "desc": body.store_description,
+                    "address": body.store_address, "menu_details": [menu.model_dump() for menu in body.menu_details],
                     "menus": [name.strip()[:80] for name in body.menus if name.strip()]}
             yield {"type": "progress", "stage": "scripting"}
             profile, style = build_style(body, photos, shop)
