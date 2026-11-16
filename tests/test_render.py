@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import unittest
 from unittest.mock import patch
@@ -48,6 +49,35 @@ class CardNewsRenderTest(unittest.TestCase):
         self.assertEqual(self.client.post("/cardnews/renders", json=body).status_code, 401)
         body["photos"][0]["download_url"] = "https://other.example/photo"
         self.assertEqual(self.client.post("/cardnews/renders", headers=self.headers, json=body).status_code, 400)
+
+    def test_streams_progress_and_preserves_validation_errors(self):
+        def steps(body, destinations):
+            for stage in ["preparing", "scripting", "designing", "rendering", "uploading"]:
+                yield {"type": "progress", "stage": stage}
+            yield {"type": "result", "result": {"cards": [], "template": "t1", "fallback": True}}
+
+        headers = {**self.headers, "accept": "application/x-ndjson"}
+        with patch.object(api, "render_steps", side_effect=steps):
+            response = self.client.post("/cardnews/renders", headers=headers, json=self.body())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("application/x-ndjson", response.headers["content-type"])
+        events = [json.loads(line) for line in response.text.splitlines()]
+        self.assertEqual([event["stage"] for event in events[:-1]], ["preparing", "scripting", "designing", "rendering", "uploading"])
+        self.assertEqual(events[-1]["type"], "result")
+        body = self.body()
+        body["photos"][0]["download_url"] = "https://other.example/photo"
+        self.assertEqual(self.client.post("/cardnews/renders", headers=headers, json=body).status_code, 400)
+
+    def test_stream_errors_are_terminal_without_a_success_result(self):
+        def broken_steps(*args):
+            yield {"type": "progress", "stage": "rendering"}
+            raise api.HTTPException(502, "Unable to create card news")
+
+        with patch.object(api, "render_steps", side_effect=broken_steps):
+            response = self.client.post("/cardnews/renders", headers={**self.headers, "accept": "application/x-ndjson"}, json=self.body())
+        events = [json.loads(line) for line in response.text.splitlines()]
+        self.assertEqual(events[-1], {"type": "error", "code": "RENDER_FAILED"})
+        self.assertFalse(any(event["type"] == "result" for event in events))
 
     def test_both_themes_produce_three_real_pngs(self):
         for theme, template in [("minimal", "t1"), ("christmas", "x1")]:

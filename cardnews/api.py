@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from hmac import compare_digest
@@ -9,6 +10,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import StreamingResponse
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
@@ -86,7 +88,7 @@ def health():
 
 
 @app.post("/cardnews/renders")
-def render(body: RenderRequest, x_cardnews_api_key: str = Header(default="")):
+def render(body: RenderRequest, x_cardnews_api_key: str = Header(default=""), accept: str = Header(default="")):
     secret = os.environ.get("CARDNEWS_INTERNAL_API_KEY", "").strip()
     if not secret:
         raise HTTPException(503, "Card news service is not configured")
@@ -107,17 +109,30 @@ def render(body: RenderRequest, x_cardnews_api_key: str = Header(default="")):
     except ValueError as error:
         raise HTTPException(400, str(error)) from error
 
+    if "application/x-ndjson" in accept:
+        return StreamingResponse(render_events(body, destinations), media_type="application/x-ndjson", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+    for event in render_steps(body, destinations):
+        if event["type"] == "result":
+            return event["result"]
+
+
+def render_steps(body: RenderRequest, destinations: list[str]):
     try:
         with TemporaryDirectory(prefix="postalk-cardnews-") as temp, httpx.Client(
             timeout=15.0, trust_env=False, follow_redirects=False
         ) as client:
             root = Path(temp)
+            yield {"type": "progress", "stage": "preparing"}
             photos = {photo.role: root / f"{photo.role}.photo" for photo in body.photos}
             for photo in body.photos:
                 download_image(client, photo.download_url, photos[photo.role])
             shop = {"name": body.store_name, "area": body.area}
+            yield {"type": "progress", "stage": "scripting"}
             profile, style = build_style(body, photos, shop)
+            yield {"type": "progress", "stage": "designing"}
+            yield {"type": "progress", "stage": "rendering"}
             paths = render_cards(photos, shop, profile, style, root)
+            yield {"type": "progress", "stage": "uploading"}
             results = []
             for path, url, key in zip(paths, body.uploads, destinations, strict=True):
                 size = path.stat().st_size
@@ -128,7 +143,15 @@ def render(body: RenderRequest, x_cardnews_api_key: str = Header(default="")):
                         "Content-Type": "image/png", "Content-Length": str(size), "x-upsert": "true",
                     }).raise_for_status()
                 results.append({"key": key, "bytes": size})
-            return {"cards": results, "template": style["template"], "fallback": bool(style.get("fallback"))}
+            yield {"type": "result", "result": {"cards": results, "template": style["template"], "fallback": bool(style.get("fallback"))}}
     except Exception as error:
         logger.warning("Card news job %s failed (%s)", body.job_id, type(error).__name__)
         raise HTTPException(502, "Unable to create card news") from error
+
+
+def render_events(body: RenderRequest, destinations: list[str]):
+    try:
+        for event in render_steps(body, destinations):
+            yield json.dumps(event, ensure_ascii=False) + "\n"
+    except HTTPException:
+        yield json.dumps({"type": "error", "code": "RENDER_FAILED"}) + "\n"
