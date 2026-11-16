@@ -1,6 +1,6 @@
 # postalk-cardnews
 
-POSTALK 백엔드가 보내는 사진 6장으로 1080×1350 PNG 카드뉴스 3장을 만듭니다. 미니멀과 크리스마스 테마를 지원합니다. GPT가 사진과 요청을 바탕으로 카드 문구를 만들고, Chromium이 사진과 템플릿을 합성합니다. OpenAI 연결 없이도 기본 문구로 렌더링할 수 있습니다.
+POSTALK 백엔드가 보내는 사진 6장으로 1080×1350 PNG 카드뉴스 4장(표지 1장과 본문 3장)을 만듭니다. 미니멀과 크리스마스 테마를 지원합니다. GPT가 사진과 요청을 바탕으로 카드 문구를 만들고, Chromium이 사진과 템플릿을 합성합니다. OpenAI 연결 없이도 기본 문구로 렌더링할 수 있습니다.
 
 ## Railway 배포
 
@@ -24,7 +24,7 @@ POSTALK 백엔드와 같은 Railway 프로젝트 및 환경에 Docker 서비스�
 | 메서드·경로 | 인증 | 설명 |
 | --- | --- | --- |
 | `GET /healthz` | 없음 | Railway 상태 확인. `{ "status": "ok" }`를 반환합니다. |
-| `POST /cardnews/renders` | `x-cardnews-api-key` | 사진 6장으로 카드뉴스 PNG 3장을 생성합니다. |
+| `POST /cardnews/renders` | `x-cardnews-api-key` | 사진 6장으로 카드뉴스 PNG 4장을 생성합니다. |
 
 ### `POST /cardnews/renders`
 
@@ -35,6 +35,8 @@ POSTALK 백엔드와 같은 Railway 프로젝트 및 환경에 Docker 서비스�
   "store_name": "가게 이름",
   "area": "시장 또는 지역",
   "menu_name": "대표 메뉴",
+  "store_description": "가게 소개",
+  "menus": ["대표 메뉴", "두 번째 메뉴"],
   "direction": "따뜻한 겨울 조명과 빨간 포인트",
   "photos": [
     { "role": "bowl", "download_url": "Supabase 서명 다운로드 URL" },
@@ -44,22 +46,24 @@ POSTALK 백엔드와 같은 Railway 프로젝트 및 환경에 Docker 서비스�
     { "role": "store1", "download_url": "..." },
     { "role": "store2", "download_url": "..." }
   ],
-  "uploads": ["PNG 1 업로드 URL", "PNG 2 업로드 URL", "PNG 3 업로드 URL"]
+  "uploads": ["PNG 1 업로드 URL", "PNG 2 업로드 URL", "PNG 3 업로드 URL", "PNG 4 업로드 URL"]
 }
 ```
 
 - `theme`: `minimal` 또는 `christmas`
 - 사진 역할 6개는 빠짐없이 한 번씩만 있어야 하며, 같은 파일을 재사용할 수 없습니다.
 - 입력과 출력 URL은 같은 Supabase `uploads` 버킷의 유효한 서명 URL만 허용합니다.
-- 생성 결과는 1080×1350 PNG 3장입니다.
+- 생성 결과는 1080×1350 PNG 4장입니다.
 
-성공하면 카드별 Storage 경로와 바이트 수, 사용한 템플릿 키를 반환합니다.
+성공하면 카드별 Storage 경로와 바이트 수, 템플릿 키, 인스타그램 캡션과 해시태그를 반환합니다. 첫 출력은 표지입니다. 이전 백엔드가 업로드 URL 3개를 보내면 본문 3장만 반환합니다.
 
 ```json
 {
   "cards": [{ "key": "stores/.../generated/job-1.png", "bytes": 123456 }],
   "template": "x1",
-  "fallback": false
+  "fallback": false,
+  "caption": "대표 메뉴를 만나보세요.",
+  "hashtags": ["#대표메뉴"]
 }
 ```
 

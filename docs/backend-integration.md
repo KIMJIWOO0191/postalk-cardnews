@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 프론트엔드 | 사진 업로드, 생성 시작, 진행률과 결과 표시 | 공개 |
 | POSTALK 백엔드 | 세션·파일 검증, Supabase 서명 URL 발급, 생성 작업 상태와 결과 저장 | 공개 |
-| 카드뉴스 서비스 | 사진 6장 분석, 문구·템플릿 선택, PNG 3장 생성 및 업로드 | Railway 내부 전용 |
+| 카드뉴스 서비스 | 사진 6장 분석, 문구·템플릿 선택, PNG 4장 생성 및 업로드 | Railway 내부 전용 |
 | Supabase Storage | 원본 사진과 생성 PNG 보관 | 서명 URL로만 접근 |
 
 프론트엔드는 `POST /cardnews/renders`를 호출하지 않는다. 이 경로에 필요한 내부 API 키와 서명 URL은 브라우저에 노출해서는 안 된다.
@@ -17,10 +17,10 @@
 
 1. 사용자가 POSTALK 프론트에서 사진을 올린다.
 2. 백엔드는 Supabase Storage에 원본을 저장하고 카드뉴스 세션에 연결한다.
-3. 여섯 번째 사진이 제출되면 백엔드는 생성 작업을 만들고, 사진 6개의 서명 다운로드 URL과 결과 PNG 3개의 서명 업로드 URL을 발급한다.
+3. 여섯 번째 사진이 제출되면 백엔드는 생성 작업을 만들고, 사진 6개의 서명 다운로드 URL과 결과 PNG 4개의 서명 업로드 URL을 발급한다.
 4. 백엔드는 Railway 내부 주소의 `POST /cardnews/renders`를 호출한다.
 5. 카드뉴스 서비스는 각 사진을 임시 공간으로 받아 테마에 맞는 HTML/Chromium 렌더링을 수행한다.
-6. 완성된 PNG 3장을 백엔드가 지정한 Supabase 경로에 업로드하고, 경로·파일 크기·사용 템플릿을 응답으로 돌려준다.
+6. 완성된 PNG 4장을 백엔드가 지정한 Supabase 경로에 업로드하고, 경로·파일 크기·사용 템플릿을 응답으로 돌려준다.
 7. 백엔드는 생성 결과를 DB에 저장한다. 프론트는 백엔드의 생성 작업 조회 API만 폴링한다.
 
 ## 3. 백엔드 호출 계약
@@ -43,7 +43,7 @@
 | `store_name` | 예 | 1~200자 |
 | `area`, `menu_name`, `direction` | 아니오 | 각각 지역·대표 메뉴·디자인 보충 요청 |
 | `photos` | 예 | 6개, 역할 중복 없이 모두 포함 |
-| `uploads` | 예 | PNG 3개용 Supabase 서명 업로드 URL |
+| `uploads` | 예 | PNG 4개용 Supabase 서명 업로드 URL |
 
 사진 역할은 `bowl`, `zoom`, `food1`, `food2`, `store1`, `store2`를 각각 한 번씩만 넣는다. 같은 파일을 여러 역할에 재사용할 수 없다. 입력과 출력 URL은 현재 `SUPABASE_URL`과 같은 프로젝트의 `uploads` 버킷 서명 URL이어야 한다.
 
@@ -55,7 +55,9 @@
     { "key": "stores/.../generated/<job-id>-1.png", "bytes": 123456 }
   ],
   "template": "x1",
-  "fallback": false
+  "fallback": false,
+  "caption": "대표 메뉴를 만나보세요.",
+  "hashtags": ["#대표메뉴"]
 }
 ```
 

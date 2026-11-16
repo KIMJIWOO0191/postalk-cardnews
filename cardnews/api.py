@@ -34,9 +34,11 @@ class RenderRequest(BaseModel):
     store_name: str = Field(min_length=1, max_length=200)
     area: str = Field(default="", max_length=200)
     menu_name: str = Field(default="", max_length=200)
+    store_description: str = Field(default="", max_length=500)
+    menus: list[str] = Field(default_factory=list, max_length=3)
     direction: str = Field(default="", max_length=500)
     photos: list[Photo] = Field(min_length=6, max_length=6)
-    uploads: list[str] = Field(min_length=3, max_length=3)
+    uploads: list[str] = Field(min_length=3, max_length=4)
 
 
 def object_key(url: str, *, upload: bool = False) -> str:
@@ -69,17 +71,19 @@ def download_image(client: httpx.Client, url: str, path: Path) -> None:
 
 def build_style(body: RenderRequest, photos: dict, shop: dict) -> tuple[dict, dict]:
     profile = {"main_food": body.menu_name}
-    default = {"template": design.THEMES[body.theme]["default"], "fallback": True}
+    def fallback():
+        return {"template": design.THEMES[body.theme]["default"], "fallback": True,
+                "caption": design.default_caption(shop, profile, body.theme)}
     if not os.environ.get("OPENAI_API_KEY"):
-        return profile, default
+        return profile, fallback()
     with OpenAI(timeout=15.0, max_retries=0) as client:
         detected = design.analyze_photos(client, photos, shop)
         if not detected.get("error"):
-            profile = detected
+            profile = {**detected, "main_food": body.menu_name or detected.get("main_food", "")}
         try:
             return profile, design.make_style(client, body.direction, shop, profile=profile, theme=body.theme)
         except (TypeError, AttributeError, ValueError):
-            return profile, default
+            return profile, fallback()
 
 
 @app.get("/healthz")
@@ -103,7 +107,7 @@ def render(body: RenderRequest, x_cardnews_api_key: str = Header(default=""), ac
         destinations = [object_key(url, upload=True) for url in body.uploads]
         root = destinations[0].rsplit("/", 1)[0]
         if not root.endswith("/generated") or destinations != [
-            f"{root}/{body.job_id}-{i}.png" for i in range(1, 4)
+            f"{root}/{body.job_id}-{i}.png" for i in range(1, len(body.uploads) + 1)
         ]:
             raise ValueError("Invalid output paths")
     except ValueError as error:
@@ -126,12 +130,14 @@ def render_steps(body: RenderRequest, destinations: list[str]):
             photos = {photo.role: root / f"{photo.role}.photo" for photo in body.photos}
             for photo in body.photos:
                 download_image(client, photo.download_url, photos[photo.role])
-            shop = {"name": body.store_name, "area": body.area}
+            shop = {"name": body.store_name, "area": body.area, "desc": body.store_description,
+                    "menus": [name.strip()[:80] for name in body.menus if name.strip()]}
             yield {"type": "progress", "stage": "scripting"}
             profile, style = build_style(body, photos, shop)
             yield {"type": "progress", "stage": "designing"}
             yield {"type": "progress", "stage": "rendering"}
-            paths = render_cards(photos, shop, profile, style, root)
+            # Earlier callers provide three upload URLs and still receive the three body cards.
+            paths = render_cards(photos, shop, profile, style, root, include_cover=len(destinations) == 4)
             yield {"type": "progress", "stage": "uploading"}
             results = []
             for path, url, key in zip(paths, body.uploads, destinations, strict=True):
@@ -143,7 +149,9 @@ def render_steps(body: RenderRequest, destinations: list[str]):
                         "Content-Type": "image/png", "Content-Length": str(size), "x-upsert": "true",
                     }).raise_for_status()
                 results.append({"key": key, "bytes": size})
-            yield {"type": "result", "result": {"cards": results, "template": style["template"], "fallback": bool(style.get("fallback"))}}
+            yield {"type": "result", "result": {"cards": results, "template": style["template"],
+                   "fallback": bool(style.get("fallback")), "caption": style["caption"]["text"],
+                   "hashtags": style["caption"]["hashtags"]}}
     except Exception as error:
         logger.warning("Card news job %s failed (%s)", body.job_id, type(error).__name__)
         raise HTTPException(502, "Unable to create card news") from error

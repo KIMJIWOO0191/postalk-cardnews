@@ -11,7 +11,7 @@ from . import design
 Image.MAX_IMAGE_PIXELS = 32_000_000
 
 
-def render_cards(photos: dict, shop: dict, profile: dict, style: dict, root: Path) -> list[Path]:
+def render_cards(photos: dict, shop: dict, profile: dict, style: dict, root: Path, *, include_cover: bool = True) -> list[Path]:
     template = style["template"]
     copy = design.default_copy(shop, profile)
     for card, fields in (style.get("copy") or {}).get(template, {}).items():
@@ -34,7 +34,8 @@ def render_cards(photos: dict, shop: dict, profile: dict, style: dict, root: Pat
     html = html.replace("<head>", f'<head><base href="{design.HERE.as_uri()}/">', 1)
     page_file = root / "page.html"
     page_file.write_text(html, encoding="utf-8")
-    paths = [root / f"card-{i}.png" for i in range(1, 4)]
+    indices = range(0 if include_cover else 1, 4)
+    paths = [root / f"card-{i}.png" for i in indices]
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(executable_path=os.environ.get("CARDNEWS_CHROMIUM_PATH") or None)
         try:
@@ -42,7 +43,7 @@ def render_cards(photos: dict, shop: dict, profile: dict, style: dict, root: Pat
             page.route(re.compile(r"^https?://"), lambda route: route.abort())
             page.goto(page_file.as_uri())
             page.wait_for_selector('body[data-ready="1"]', timeout=20_000)
-            for index, path in enumerate(paths, 1):
+            for index, path in zip(indices, paths, strict=True):
                 page.locator(f"#{template}c{index}").screenshot(path=str(path), timeout=20_000)
         finally:
             browser.close()

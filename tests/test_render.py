@@ -24,7 +24,7 @@ class CardNewsRenderTest(unittest.TestCase):
         self.addCleanup(env.stop)
         self.client = TestClient(api.app)
 
-    def body(self, theme="minimal"):
+    def body(self, theme="minimal", cards=4):
         return {
             "job_id": self.job_id, "theme": theme, "store_name": "떡집 </script>", "menu_name": "쑥떡",
             "photos": [
@@ -33,7 +33,7 @@ class CardNewsRenderTest(unittest.TestCase):
             ],
             "uploads": [
                 f"{self.project}/storage/v1/object/upload/sign/uploads/store/submission/generated/{self.job_id}-{i}.png?token=test"
-                for i in range(1, 4)
+                for i in range(1, cards + 1)
             ],
         }
 
@@ -79,9 +79,9 @@ class CardNewsRenderTest(unittest.TestCase):
         self.assertEqual(events[-1], {"type": "error", "code": "RENDER_FAILED"})
         self.assertFalse(any(event["type"] == "result" for event in events))
 
-    def test_both_themes_produce_three_real_pngs(self):
-        for theme, template in [("minimal", "t1"), ("christmas", "x1")]:
-            with self.subTest(theme=theme):
+    def test_both_themes_render_cover_and_body_with_legacy_support(self):
+        for theme, template, count in [("minimal", "t1", 4), ("christmas", "x1", 4), ("minimal", "t1", 3)]:
+            with self.subTest(theme=theme, count=count):
                 uploads = {}
 
                 def storage(request):
@@ -97,10 +97,12 @@ class CardNewsRenderTest(unittest.TestCase):
 
                 transfer = httpx.Client(transport=httpx.MockTransport(storage))
                 with patch.object(api.httpx, "Client", return_value=transfer):
-                    response = self.client.post("/cardnews/renders", headers=self.headers, json=self.body(theme))
+                    response = self.client.post("/cardnews/renders", headers=self.headers, json=self.body(theme, count))
                 self.assertEqual(response.status_code, 200, response.text)
                 self.assertEqual(response.json()["template"], template)
-                self.assertEqual(len(uploads), 3)
+                self.assertEqual(len(uploads), count)
+                self.assertIn("쑥떡", response.json()["caption"])
+                self.assertIn("#쑥떡", response.json()["hashtags"])
                 for card in response.json()["cards"]:
                     image = uploads[card["key"]]
                     self.assertEqual(len(image), card["bytes"])
@@ -108,3 +110,25 @@ class CardNewsRenderTest(unittest.TestCase):
                         self.assertEqual(rendered.format, "PNG")
                         self.assertEqual(rendered.size, (1080, 1350))
                         self.assertGreater(len(rendered.getcolors(512) or [None] * 513), 5)
+
+    def test_caption_rejects_unsupported_promotion_and_respects_owner_input(self):
+        shop = {"name": "시장떡집", "area": "중앙시장", "desc": "20년째 떡을 만들어요", "menus": ["쑥떡"]}
+        profile = {"main_food": "쑥떡"}
+        invalid = {"hook": "오늘 무료로 드려요", "body": "할인 이벤트가 열리고 있어요."}
+        fallback = api.design.clean_caption(invalid, shop, profile)
+        self.assertNotIn("무료", fallback["text"])
+        self.assertIn("📍 시장떡집", fallback["text"])
+        valid = {"hook": "20년째 떡을 만들어요", "body": "쑥떡이 눈에 들어오는 곳이에요.", "hashtags": ["#쑥떡", "#쑥떡"]}
+        cleaned = api.design.clean_caption(valid, shop, profile)
+        self.assertIn(valid["hook"], cleaned["text"])
+        self.assertEqual(cleaned["hashtags"].count("#쑥떡"), 1)
+
+    def test_ai_style_keeps_cover_and_caption_for_selected_template(self):
+        shop = {"name": "시장떡집", "area": "중앙시장", "desc": "20년째 떡을 만들어요", "menus": ["쑥떡"]}
+        raw = {"template": "t2", "copy": {"t2": {"c0": {"q": "오늘은 쑥떡?"}}},
+               "caption": {"hook": "20년째 떡을 만들어요", "body": "쑥떡이 눈에 들어오는 곳이에요.", "hashtags": ["#쑥떡"]}}
+        with patch.object(api.design, "ask_gpt", return_value=(raw, "test-model")):
+            style = api.design.make_style(None, "귀엽게", shop, profile={"main_food": "쑥떡"})
+        self.assertFalse(style["fallback"])
+        self.assertEqual(style["copy"]["t2"]["c0"]["q"], "오늘은 쑥떡?")
+        self.assertIn(raw["caption"]["hook"], style["caption"]["text"])
