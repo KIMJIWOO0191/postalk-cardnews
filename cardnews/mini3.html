@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<style>
+@font-face { font-family: 'NotoKR'; src: url('fonts/NotoSansKR.ttf'); font-weight: 100 900; }
+@font-face { font-family: 'Playfair'; src: url('fonts/PlayfairDisplay.ttf'); font-weight: 400 900; }
+@font-face { font-family: 'Inter'; src: url('fonts/Inter.ttf'); font-weight: 100 900; }
+@font-face { font-family: 'GamjaFlower'; src: url('fonts/GamjaFlower-Regular.ttf'); }
+@font-face { font-family: 'Gaegu'; src: url('fonts/Gaegu-Regular.ttf'); }
+@font-face { font-family: 'NanumPen'; src: url('fonts/NanumPenScript-Regular.ttf'); }
+@font-face { font-family: 'HiMelody'; src: url('fonts/HiMelody-Regular.ttf'); }
+@font-face { font-family: 'SingleDay'; src: url('fonts/SingleDay-Regular.ttf'); }
+:root { --hand: 'GamjaFlower', 'NotoKR', cursive; --c1: #FFB6CF; --c2: #FFEB8A; --c3: #A9C8FF; --polbg: #FBE6DC; --tcol: #E0708F; --label: #5C3828; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #444; }
+.card { position: relative; width: 1080px; height: 1350px; overflow: hidden; margin-bottom: 20px; color: #fff; font-family: 'NotoKR', sans-serif; background: #222; }
+.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sh { text-shadow: 0 2px 14px rgba(0,0,0,.45); }
+.abs { position: absolute; } .ctr { position: absolute; left: 0; width: 1080px; text-align: center; }
+.scrim-t { position: absolute; left: 0; top: 0; width: 100%; height: 520px; background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
+.scrim-b { position: absolute; left: 0; bottom: 0; width: 100%; height: 520px; background: linear-gradient(0deg, rgba(0,0,0,.6), rgba(0,0,0,0)); }
+.hand { font-family: var(--hand); font-weight: 400; letter-spacing: .02em; }
+/* T1 심플 */
+.t1-en { font: 600 30px/1.2 'Inter', 'NotoKR'; } .t1-ti { font: 700 66px/1.18 'NotoKR'; letter-spacing: -.02em; }
+.t1-tag { font: 500 19px/1.55 'Inter', 'NotoKR'; letter-spacing: .08em; } .t1-big { font: 400 78px/1.1 'Playfair', serif; letter-spacing: .06em; text-transform: uppercase; }
+.t1-h { font: 700 40px/1.3 'NotoKR'; } .t1-d { font: 400 36px/1.55 'NotoKR'; }
+.white { background: #fff; color: #111; }
+.ph { position: absolute; overflow: hidden; background: #ddd; } .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cap1 { position: absolute; font: 500 33px/1.5 'NotoKR'; color: #111; letter-spacing: -.01em; }
+.num { display: inline-block; width: 42px; height: 42px; line-height: 42px; border-radius: 50%; font-size: 26px; margin-right: 12px; vertical-align: 2px; text-align: center; }
+/* T2 귀여움 */
+.bubble { position: absolute; background: #fff; color: #111; border-radius: 52px; padding: 30px 44px; font: 800 44px/1.35 'NotoKR'; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.bubble::after { content: ''; position: absolute; left: 60px; bottom: -34px; width: 56px; height: 56px; background: #fff; border-radius: 0 0 0 60px; transform: skewX(-24deg); }
+.doodle { position: absolute; font-family: var(--hand); font-size: 46px; line-height: 1.25; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+.frame { position: absolute; inset: 30px; border: 7px solid #fff; border-radius: 40px; }
+.tape { position: absolute; width: 150px; height: 44px; background: rgba(255,230,160,.78); box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+.pol { position: absolute; background: #fff; padding: 20px 20px 74px; box-shadow: 0 8px 22px rgba(0,0,0,.2); }
+.pol img { width: 100%; height: 440px; object-fit: cover; display: block; }
+.pol span { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; font: 400 40px/1 var(--hand); color: #6b4a3a; }
+/* T3 핫플 */
+.label { position: absolute; background: var(--label); color: #fff; padding: 22px 44px; border-radius: 16px; font: 600 38px/1.2 'NotoKR'; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+.lines { position: absolute; font-family: var(--hand); text-shadow: 0 2px 10px rgba(0,0,0,.5); color: #fff; }
+.inset { position: absolute; border: 8px solid #fff; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+.vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%); }
+.stamp { position: absolute; width: 130px; height: 130px; border: 4px solid #fff; border-radius: 50%; text-align: center; padding-top: 36px; font: 800 26px/1.15 'Inter', 'NotoKR', sans-serif; letter-spacing: .08em; transform: rotate(-10deg); }
+/* T4 에디토리얼 */
+:root { --t4bg: #E6E6E6; --t4bg2: #D9D9D9; --t4dark: #3A2418; }
+.t4-t { position: absolute; font: 800 128px/.98 'Inter', 'NotoKR', sans-serif; letter-spacing: -.045em; color: #111; }
+.t4-h { position: absolute; font: 700 34px/1.2 'Inter', 'NotoKR', sans-serif; color: #111; } .t4-li { position: absolute; font: 400 31px/1.5 'Inter', 'NotoKR', sans-serif; color: #222; }
+.t4-i { position: absolute; font-family: 'Playfair', 'NotoSerifKR', 'Noto Serif CJK KR', serif; font-weight: 500; color: #F4E6D4; line-height: 1.02; }
+</style></head><body>
+
+<!-- ===== 템플릿 1 · 심플 ===== -->
+<section class="card" id="t1c1"><img class="bg" data-photo="bowl"><div class="scrim-t"></div><div class="scrim-b"></div>
+  <div class="abs sh t1-en" style="left:70px;top:84px" data-t="t1.c1.en"></div>
+  <div class="abs sh t1-ti" style="left:70px;top:132px" data-t="t1.c1.title" data-fit="900"></div>
+  <div class="abs sh t1-tag" style="left:70px;top:326px" data-t="t1.c1.tag"></div>
+  <div class="ctr sh t1-big" style="top:1178px" data-t="t1.c1.big" data-fit="960"></div>
+</section>
+<section class="card" id="t1c2"><img class="bg" data-photo="zoom"><div class="scrim-t"></div>
+  <div class="ctr sh t1-h" style="top:110px"><span class="num" style="background:#fff;color:#111">1</span><span data-t="t1.c2.head"></span></div>
+  <div class="ctr sh t1-d" style="top:236px" data-t="t1.c2.desc" data-fit="980"></div>
+</section>
+<section class="card white" id="t1c3">
+  <div class="ctr t1-h" style="top:92px"><span class="num" style="background:#111;color:#fff">1</span><span data-t="t1.c3.head"></span></div>
+  <div class="ph" style="left:62px;top:200px;width:470px;height:490px"><img data-photo="food1"></div>
+  <div class="ph" style="left:62px;top:712px;width:470px;height:490px"><img data-photo="food2"></div>
+  <div class="cap1" style="left:572px;top:200px;width:440px" data-t="t1.c3.cap1"></div>
+  <div class="ph" style="left:572px;top:330px;width:446px;height:420px"><img data-photo="store1"></div>
+  <div class="ph" style="left:572px;top:772px;width:446px;height:430px"><img data-photo="store2"></div>
+  <div class="cap1" style="left:62px;top:1232px;width:900px" data-t="t1.c3.cap2" data-fit="900"></div>
+</section>
+
+<!-- ===== 템플릿 2 · 귀여움 ===== -->
+<section class="card" id="t2c1"><img class="bg" data-photo="bowl" style="transform:scale(1.12) translateX(-3%)"><div style="position:absolute;inset:0;background:rgba(255,196,140,.16)"></div>
+  <div class="frame"></div>
+  <div class="tape" style="left:90px;top:48px;transform:rotate(-8deg)"></div><div class="tape" style="right:90px;top:48px;transform:rotate(7deg)"></div>
+  <div class="bubble" style="left:84px;top:120px;width:620px" data-t="t2.c1.bubble" data-fit="540"></div>
+  <div class="abs" style="right:100px;top:250px;font-size:74px;color:var(--c1);text-shadow:0 2px 10px rgba(0,0,0,.25)">♡</div>
+  <div class="abs" style="right:230px;top:380px;font-size:56px;color:var(--c2)">✦</div>
+  <div class="lines hand" style="left:0;width:1080px;text-align:center;top:1120px;font-size:78px;transform:rotate(-3deg)"><span data-t="t2.c1.hand" data-fit="900"></span> <span style="font-size:50px;color:var(--c2)">✧ ✦</span></div>
+</section>
+<section class="card" id="t2c2"><img class="bg" data-photo="bowl" style="object-position:30% 50%"><div style="position:absolute;inset:0;background:rgba(40,28,20,.3)"></div>
+  <svg class="abs" style="left:0;top:0" width="1080" height="1350" viewBox="0 0 1080 1350" fill="none" stroke-linecap="round">
+    <rect x="40" y="44" width="400" height="86" rx="43" stroke="var(--c1)" stroke-width="4"/>
+    <path d="M700 90 C650 40 760 10 820 40 C880 10 1000 40 980 110 C1040 150 990 230 920 220 C880 270 780 260 750 215 C690 220 650 150 700 90Z" stroke="var(--c2)" stroke-width="4"/>
+    <path d="M540 700 C590 730 600 760 580 790" stroke="#fff" stroke-width="4"/><path d="M568 782 L580 794 L592 776" stroke="#fff" stroke-width="4"/>
+    <path d="M70 1020 C20 960 100 900 150 950 C210 900 290 980 220 1060 L150 1120 Z" stroke="var(--c1)" stroke-width="4"/>
+    <ellipse cx="800" cy="1230" rx="250" ry="76" stroke="var(--c3)" stroke-width="4"/>
+  </svg>
+  <div class="doodle" style="left:78px;top:58px;color:var(--c1)" data-t="t2.c2.note"></div>
+  <div class="doodle" style="left:60px;top:170px;color:#fff;font-size:50px" data-t="t2.c2.check" data-fit="560"></div>
+  <div class="doodle" style="left:740px;top:70px;font-size:44px;text-align:center;width:250px;color:var(--c2)" data-t="t2.c2.cloud"></div>
+  <div class="doodle" style="left:360px;top:610px;color:#fff;font-size:46px" data-t="t2.c2.obs"></div>
+  <div class="doodle" style="left:60px;top:1180px;color:#fff;font-size:42px" data-t="t2.c2.hug"></div>
+  <div class="doodle" style="left:600px;top:1190px;font-size:44px;width:400px;text-align:center;color:var(--c3)" data-t="t2.c2.remind"></div>
+</section>
+<section class="card" id="t2c3" style="background:var(--polbg)">
+  <div class="pol" style="left:60px;top:70px;width:460px;transform:rotate(-4deg)"><img data-photo="food1"><span data-t="t2.c3.p1"></span></div>
+  <div class="pol" style="left:570px;top:110px;width:450px;transform:rotate(3deg)"><img data-photo="store1"><span data-t="t2.c3.p2"></span></div>
+  <div class="pol" style="left:80px;top:690px;width:450px;transform:rotate(3deg)"><img data-photo="food2"><span data-t="t2.c3.p3"></span></div>
+  <div class="pol" style="left:570px;top:720px;width:450px;transform:rotate(-3deg)"><img data-photo="store2"><span data-t="t2.c3.p4"></span></div>
+  <div class="tape" style="left:230px;top:50px;transform:rotate(-6deg)"></div><div class="tape" style="left:740px;top:92px;transform:rotate(5deg)"></div>
+  <div class="tape" style="left:250px;top:670px;transform:rotate(5deg)"></div><div class="tape" style="left:740px;top:700px;transform:rotate(-5deg)"></div>
+  <div class="hand" style="position:absolute;left:0;width:1080px;text-align:center;top:1236px;font-size:92px;line-height:1;color:var(--tcol)" data-t="t2.c3.title" data-fit="960"></div>
+</section>
+
+<!-- ===== 템플릿 3 · 핫플 ===== -->
+<section class="card" id="t3c1"><img class="bg" data-photo="bowl" style="transform:scale(1.4);object-position:85% 45%"><div class="vig"></div><div class="scrim-b"></div>
+  <div class="lines" style="left:-250px;top:640px;width:760px;text-align:center;transform:rotate(-90deg);font-size:150px;letter-spacing:.08em" data-t="t3.c1.place" data-fit="740"></div>
+  <div class="inset" style="left:640px;top:70px;width:340px;height:260px;transform:rotate(4deg)"><img data-photo="store2" style="width:100%;height:100%;object-fit:cover"></div>
+  <div class="stamp" style="left:80px;top:80px" data-t="t3.c1.stamp"></div>
+  <div class="label" style="left:60px;top:1150px" data-t="t3.c1.label" data-fit="900"></div>
+</section>
+<section class="card" id="t3c2"><img class="bg" data-photo="zoom" style="transform:scale(1.15)"><div class="vig"></div>
+  <div class="lines" style="left:70px;top:90px;font-size:64px;letter-spacing:.12em" data-t="t3.c2.place"></div>
+  <div class="lines" style="left:70px;top:176px;font-size:50px" data-t="t3.c2.sub"></div>
+  <div class="lines" style="left:0;width:1080px;text-align:right;padding-right:80px;top:640px;font-size:60px;transform:rotate(-4deg)" data-t="t3.c2.mid" data-fit="900"></div>
+  <div class="lines" style="left:70px;top:1180px;font-size:86px" data-t="t3.c2.bottom" data-fit="940"></div>
+</section>
+<section class="card" id="t3c3"><img class="bg" data-photo="store1"><div class="vig"></div><div class="scrim-t"></div>
+  <div class="lines" style="left:0;width:1080px;text-align:center;top:90px;font-size:74px;letter-spacing:.1em" data-t="t3.c3.top"></div>
+  <div class="lines" style="left:0;width:1080px;text-align:center;top:200px;font-size:52px" data-t="t3.c3.sub"></div>
+  <div class="lines" style="left:0;width:1080px;text-align:center;top:1170px;font-size:72px" data-t="t3.c3.bottom" data-fit="960"></div>
+</section>
+
+<!-- ===== 템플릿 4 · 에디토리얼 ===== -->
+<section class="card" id="t4c1" style="background:var(--t4bg);color:#111">
+  <div class="abs" style="left:50px;top:30px;font:600 22px/1 'Inter','NotoKR';letter-spacing:.05em;color:#111" data-t="t4.c1.tag" data-fit="800"></div>
+  <div class="t4-t" style="left:46px;top:84px" data-t="t4.c1.title" data-fit="900"></div>
+  <div class="circ4" style="left:500px;top:400px;width:1000px;height:1000px;border-radius:50%;overflow:hidden;position:absolute;border:8px solid rgba(255,255,255,.55);box-shadow:0 0 0 2px rgba(0,0,0,.05)"><img data-photo="bowl" style="width:100%;height:100%;object-fit:cover"></div>
+  <div class="abs" style="left:84px;top:560px;width:3px;height:300px;background:#111"></div>
+  <div class="t4-h" style="left:80px;top:1036px" data-t="t4.c1.head"></div>
+  <div class="t4-li" style="left:80px;top:1094px" data-t="t4.c1.list"></div>
+</section>
+<section class="card" id="t4c2" style="background:var(--t4bg2);color:#222">
+  <div class="ctr" style="top:30px;font:500 20px/1 'Inter','NotoKR';letter-spacing:.34em;color:#555" data-t="t4.c2.top" data-fit="900"></div>
+  <div class="ctr" style="top:96px;font:400 128px/1.05 'GreatVibes','Playfair',cursive;color:#222" data-t="t4.c2.script" data-fit="760"></div>
+  <div class="ctr" style="top:262px;font:400 66px/1.1 'Inter','NotoKR';letter-spacing:.42em;color:#222;padding-left:.42em" data-t="t4.c2.spaced" data-fit="900"></div>
+  <div class="abs" style="left:200px;top:372px;width:680px;height:680px;border-radius:50%;overflow:hidden;border:12px solid #F4F2EE;box-shadow:0 44px 60px rgba(0,0,0,.2)"><img data-photo="zoom" style="width:100%;height:100%;object-fit:cover"></div>
+  <svg class="abs" style="left:0;top:0" width="1080" height="1350" fill="none"><defs><path id="t4arc" d="M268 984 A385 385 0 0 0 812 984"/></defs><text font-family="Inter, NotoKR, sans-serif" font-size="30" letter-spacing="9" fill="#333" text-anchor="middle"><textPath href="#t4arc" startOffset="50%" data-t="t4.c2.arc"></textPath></text></svg>
+  <div class="t4-h" style="left:150px;top:1168px;font-size:30px;letter-spacing:.02em" data-t="t4.c2.h1"></div><div class="t4-li" style="left:150px;top:1212px;font-size:27px;line-height:1.38" data-t="t4.c2.l1"></div>
+  <div class="t4-h" style="left:600px;top:1168px;font-size:30px;letter-spacing:.02em" data-t="t4.c2.h2"></div><div class="t4-li" style="left:600px;top:1212px;font-size:27px;line-height:1.38" data-t="t4.c2.l2"></div>
+</section>
+<section class="card" id="t4c3" style="background:var(--t4dark)">
+  <div class="abs" style="left:60px;right:60px;top:90px;border-top:3px dashed rgba(244,230,212,.75)"></div><div class="abs" style="left:60px;right:60px;top:1262px;border-top:3px dashed rgba(244,230,212,.75)"></div>
+  <div class="abs" style="left:110px;top:196px;font:500 22px/1.6 'Inter','NotoKR';letter-spacing:.05em;color:#F4E6D4;width:860px;text-align:center" data-t="t4.c3.kick"></div>
+  <div class="abs" style="left:64px;top:206px;font:400 44px/1 serif;color:#F4E6D4">✻</div><div class="abs" style="right:64px;top:206px;font:400 44px/1 serif;color:#F4E6D4">✻</div>
+  <div class="t4-i" style="left:70px;top:330px;font-style:italic;font-size:132px" data-t="t4.c3.h1" data-fit="560"></div>
+  <div class="t4-i" style="left:70px;top:466px;font-size:132px" data-t="t4.c3.h2" data-fit="560"></div>
+  <div class="t4-i" style="left:70px;top:602px;font-style:italic;font-size:132px" data-t="t4.c3.h3" data-fit="560"></div>
+  <div class="t4-i" style="left:70px;top:738px;font-size:132px" data-t="t4.c3.h4" data-fit="560"></div>
+  <div class="abs" style="left:640px;top:310px;width:380px;height:380px;border-radius:50%;overflow:hidden;border:6px solid #F4E6D4"><img data-photo="food1" style="width:100%;height:100%;object-fit:cover"></div>
+  <div class="abs" style="left:700px;top:660px;width:310px;height:310px;border-radius:50%;overflow:hidden;border:6px solid #F4E6D4;box-shadow:0 12px 30px rgba(0,0,0,.35)"><img data-photo="food2" style="width:100%;height:100%;object-fit:cover"></div>
+  <div class="abs" style="left:190px;top:1042px;width:700px;height:96px;border:3px dashed #F4E6D4;border-radius:48px;text-align:center;font:italic 500 40px/90px 'Playfair','NotoSerifKR','Noto Serif CJK KR',serif;color:#F4E6D4" data-t="t4.c3.pill" data-fit="640"></div>
+</section>
+
+<script>
+const D = __DATA__;
+const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+for (const [k, v] of Object.entries(D.vars || {})) document.documentElement.style.setProperty('--' + k, v);
+document.querySelectorAll('[data-photo]').forEach(i => { i.src = D.photos[i.dataset.photo]; });
+document.querySelectorAll('[data-t]').forEach(e => { const t = get(D.copy, e.dataset.t); e.innerHTML = t == null ? '' : esc(t).split('\n').join('<br>'); });
+function fit() {   // 글자가 길면 줄여서 칸 안에 맞춤
+  document.querySelectorAll('[data-fit]').forEach(e => {
+    const max = +e.dataset.fit; let fs = parseFloat(getComputedStyle(e).fontSize), g = 0;
+    e.style.whiteSpace = 'nowrap';
+    const w = () => { const r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect().width; };
+    while (w() > max && fs > 20 && g++ < 60) { fs -= 2; e.style.fontSize = fs + 'px'; }
+  });
+}
+Promise.all([document.fonts.ready, ...[...document.images].map(i => i.decode().catch(() => {}))]).then(() => { fit(); document.body.dataset.ready = '1'; });
+</script>
+</body></html>
