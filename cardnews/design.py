@@ -257,7 +257,8 @@ def ask_gpt(client, text, shop=None, models=None, profile=None, force=None, them
         owner_menus = s.get('menu_details') or s.get('menus') or []
         own = '사장님 입력(사실로 써도 됨): ' + json.dumps({'소개': s.get('desc') or '', '메뉴': owner_menus}, ensure_ascii=False) + '\n'
     user = (f'가게: {s["name"]} ({s["area"]})\n{own}{_profile_line(profile)}\n'
-            + (f'고정 템플릿: {force}\n' if force else '') + f'손님 말: "{(text or "").strip()}"')
+            + (f'고정 템플릿: {force}\n' if force else '')
+            + f'디자인 요청(화면 구성에만 사용하고 광고 문구에 인용하지 마세요): "{(text or "").strip()}"')
     last = None
     for m in (models or MODELS):
         try:
@@ -318,6 +319,9 @@ _SEASON = _re.compile(r'크리스마스|성탄|연말|산타|메리|christmas|[\
 
 _EMOJI = _re.compile('[\U0001F300-\U0001FAFF☀-➿⭐️]')
 _SHOP_TYPES = _re.compile(r'횟집|회\s*전문점|수산물\s*전문점|빵집|베이커리|카페|고깃집|국밥집|이자카야|분식집|떡집|중식당|일식당|한식당|양식당|주점')
+_DESIGN_TERMS = _re.compile(
+    r'딥\s*네이비|크림\s*색|버건디|컬러\s*팔레트|포인트\s*컬러|배경\s*색|색\s*조합|레이아웃|템플릿|글꼴|폰트'
+)
 _BUSINESS_FACTS = _re.compile(
     r'(?:\d+|[한두세네]|[일이삼사오육칠팔구십백]+)\s*(?:년\s*(?:이상|이 넘는|넘게|째|간|전통|역사|경력|동안)'
     r'|세대\s*전통|대\s*(?:째|를 이[은어]))(?:\s*같은\s*자리)?'
@@ -377,9 +381,9 @@ def default_caption(shop=None, profile=None, theme='minimal'):
     food = p.get('main_food') or ''
     hook = f'{where}만난 {s["name"]}.' + (' 🎄' if xm else '')
     if xm:
-        para = [(f'따뜻한 연말, {food}와 함께해요.' if food else '따뜻한 연말 식탁을 소개해요.'), '근처에 오시면 들러보세요.']
+        para = [(f'따뜻한 연말, 오늘의 메뉴는 {food}입니다.' if food else '따뜻한 연말 식탁을 소개해요.'), '근처에 오시면 들러보세요.']
     else:
-        para = [(f'오늘은 {food}를 소개해요.' if food else '사진으로 가게와 메뉴를 소개해요.'), '근처에 오시면 들러보세요.']
+        para = [(f'오늘의 메뉴는 {food}입니다.' if food else '사진으로 가게와 메뉴를 소개해요.'), '근처에 오시면 들러보세요.']
     body = '\n\n'.join(para)
     return _caption_dict(hook, body, shop, profile, [])
 
@@ -412,7 +416,7 @@ def _claim_text(value):
 def _banned(text, shop=None, profile=None):
     """광고에 쓰는 업종과 영업 관련 사실은 가게 입력에 근거가 있어야 한다."""
     own = _claim_text(_owner_text(shop))
-    for pattern in (_CAP_BANNED, _SHOP_TYPES, _BUSINESS_FACTS):
+    for pattern in (_CAP_BANNED, _SHOP_TYPES, _BUSINESS_FACTS, _DESIGN_TERMS):
         for match in pattern.finditer(text):
             claim = _claim_text(match[0])
             boundary = r'(?<!\d)' if claim[0].isdigit() else ''

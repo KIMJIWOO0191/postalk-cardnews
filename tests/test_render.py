@@ -150,8 +150,15 @@ class CardNewsRenderTest(unittest.TestCase):
         self.assertEqual(style["copy"]["t1"]["c2"], {})
         self.assertNotIn("횟집", str(style["caption"]))
         self.assertNotIn("20년째", style["caption"]["text"])
-        self.assertIn("간장게장", style["caption"]["text"])
+        self.assertIn("오늘의 메뉴는 간장게장입니다.", style["caption"]["text"])
         self.assertNotIn("횟집", str(api.design.default_copy(shop, profile)))
+
+    def test_design_request_cannot_be_used_as_cover_copy(self):
+        shop = {"name": "바다한상", "menus": ["간장게장"]}
+        raw = {"template": "t1", "copy": {"t1": {"c0": {"t": "딥네이비 / 크림색", "sub": "간장게장"}}}}
+        with patch.object(api.design, "ask_gpt", return_value=(raw, "test-model")):
+            style = api.design.make_style(None, "딥네이비 / 크림색", shop)
+        self.assertEqual(style["copy"]["t1"]["c0"], {"sub": "간장게장"})
 
     def test_caption_normalizes_punctuation_and_excludes_unconfirmed_hashtags(self):
         shop = {"name": "바다한상", "menus": ["간장게장"]}
