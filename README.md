@@ -86,3 +86,7 @@ python -m unittest discover -s tests
 ```
 
 테스트는 Supabase 요청을 모의 응답으로 처리합니다. 설치된 Chromium을 사용하려면 `CARDNEWS_CHROMIUM_PATH`에 실행 파일 경로를 지정합니다.
+
+## 운영 검증 기록
+
+PNG 생성부터 JPEG 게시 사본 변환, 캐러셀 4장 실제 게시와 중복 방지까지 확인한 결과는 [백엔드의 게시 검증 기록](https://github.com/Superkid0714/Postalk_backend/blob/main/docs/incidents/20261118-instagram-publication.md)에 정리했습니다.

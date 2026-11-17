@@ -118,3 +118,11 @@ python -m unittest discover -s tests
 ```
 
 로컬에서 실제 내부 API를 호출하려면 `SUPABASE_URL`과 테스트용 `CARDNEWS_INTERNAL_API_KEY`를 설정한다. 운영 Supabase의 서명 URL이나 운영 키를 테스트 코드와 샘플 파일에 넣지 않는다.
+
+## 생성 복구와 Instagram 게시
+
+백엔드의 전용 복구 워커가 queued/processing 생성 작업을 점검합니다. 작업은 DB 임대 잠금으로 보호되며, 중단 후 임대가 만료되면 같은 작업 ID와 결과 경로로 다시 처리합니다. 이미 failed인 과거 작업을 임의로 재생성하지 않습니다.
+
+이 서비스는 PNG 카드 4장을 만들고 Supabase에 업로드합니다. Instagram 게시를 위해 JPEG 사본을 준비하고 캐러셀 자식 컨테이너 4개와 부모 컨테이너를 생성하는 일은 백엔드가 담당합니다. 프론트는 공개 POSTALK 게시 API에서 실제 published 상태와 permalink를 확인합니다. 생성 복구 활성화만으로 Instagram 게시 동기화가 활성화되지 않습니다.
+
+현재 운영 설정과 게시 검증 기록은 [백엔드 운영 문서](https://github.com/Superkid0714/Postalk_backend/blob/main/docs/OPERATIONS.md)를 참고합니다.
