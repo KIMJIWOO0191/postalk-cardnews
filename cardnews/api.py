@@ -48,6 +48,23 @@ class RenderRequest(BaseModel):
     uploads: list[str] = Field(min_length=3, max_length=4)
 
 
+class RenderedCard(BaseModel):
+    key: str
+    bytes: int
+
+
+class RenderResult(BaseModel):
+    cards: list[RenderedCard]
+    template: str
+    fallback: bool
+    caption: str
+    hashtags: list[str]
+
+
+class RenderError(BaseModel):
+    detail: str
+
+
 def object_key(url: str, *, upload: bool = False) -> str:
     base = urlsplit(os.environ.get("SUPABASE_URL", ""))
     target = urlsplit(url)
@@ -98,7 +115,20 @@ def health():
     return {"status": "ok", "service": "postalk-cardnews", "mediaProvider": "supabase"}
 
 
-@app.post("/cardnews/renders")
+@app.post(
+    "/cardnews/renders",
+    response_model=RenderResult,
+    responses={
+        200: {"content": {
+            "application/x-ndjson": {"schema": {"type": "string"}, "example":
+                '{"type":"progress","stage":"preparing"}\n{"type":"error","code":"RENDER_FAILED"}\n'},
+        }, "description": "JSON render result, or NDJSON progress with a terminal result or error event."},
+        400: {"model": RenderError, "description": "Invalid photo roles, signed URLs or output paths."},
+        401: {"model": RenderError, "description": "Invalid internal API key."},
+        502: {"model": RenderError, "description": "Rendering or storage failed in JSON mode."},
+        503: {"model": RenderError, "description": "Internal API key is not configured."},
+    },
+)
 def render(body: RenderRequest, x_cardnews_api_key: str = Header(default=""), accept: str = Header(default="")):
     secret = os.environ.get("CARDNEWS_INTERNAL_API_KEY", "").strip()
     if not secret:

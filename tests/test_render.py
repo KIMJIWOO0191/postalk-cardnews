@@ -134,3 +134,44 @@ class CardNewsRenderTest(unittest.TestCase):
         self.assertFalse(style["fallback"])
         self.assertEqual(style["copy"]["t2"]["c0"]["q"], "오늘은 쑥떡?")
         self.assertIn(raw["caption"]["hook"], style["caption"]["text"])
+
+    def test_unsupported_ad_claims_are_removed_from_cards_caption_and_tags(self):
+        shop = {"name": "바다한상", "menus": ["간장게장"], "desc": "간장게장을 만들어요"}
+        profile = {"shop_type": "횟집", "main_food": "간장게장"}
+        raw = {
+            "template": "t1",
+            "copy": {"t1": {"c0": {"sub": "20년째 같은 자리", "t": "간장게장을 만나보세요 . ~~ .."},
+                            "c2": {"desc": "모란시장의 횟집"}}},
+            "caption": {"hook": "20년째 같은 자리", "body": "간장게장을 만드는 횟집입니다.", "hashtags": ["#횟집"]},
+        }
+        with patch.object(api.design, "ask_gpt", return_value=(raw, "test-model")):
+            style = api.design.make_style(None, "", shop, profile=profile)
+        self.assertEqual(style["copy"]["t1"]["c0"], {"t": "간장게장을 만나보세요."})
+        self.assertEqual(style["copy"]["t1"]["c2"], {})
+        self.assertNotIn("횟집", str(style["caption"]))
+        self.assertNotIn("20년째", style["caption"]["text"])
+        self.assertIn("간장게장", style["caption"]["text"])
+        self.assertNotIn("횟집", str(api.design.default_copy(shop, profile)))
+
+    def test_caption_normalizes_punctuation_and_excludes_unconfirmed_hashtags(self):
+        shop = {"name": "바다한상", "menus": ["간장게장"]}
+        caption = api.design.clean_caption({
+            "hook": "간장게장을 만나보세요 . ~~ ..",
+            "body": "가게에서 간장게장을 맛보세요 ~ !",
+            "hashtags": ["#횟집", "#20년째", "#간장게장"],
+        }, shop)
+        self.assertEqual(caption["hook"], "간장게장을 만나보세요.")
+        self.assertEqual(caption["body"], "가게에서 간장게장을 맛보세요!")
+        self.assertEqual(caption["hashtags"], ["#간장게장", "#바다한상"])
+
+    def test_smaller_price_does_not_match_a_substring_of_owner_price(self):
+        shop = {"name": "바다한상", "menu_details": [{"name": "간장게장", "description": "15,000원"}]}
+        raw = {"hook": "간장게장 한 접시", "body": "간장게장 한 접시는 5,000원이에요."}
+        self.assertNotIn("5,000원", api.design.clean_caption(raw, shop)["text"])
+        raw["body"] = "간장게장 한 접시는 15,000원이에요."
+        self.assertIn("15,000원", api.design.clean_caption(raw, shop)["text"])
+
+    def test_internal_openapi_describes_json_ndjson_and_errors(self):
+        responses = self.client.get("/openapi.json").json()["paths"]["/cardnews/renders"]["post"]["responses"]
+        self.assertEqual(set(responses["200"]["content"]), {"application/json", "application/x-ndjson"})
+        self.assertTrue({"400", "401", "422", "502", "503"} <= responses.keys())

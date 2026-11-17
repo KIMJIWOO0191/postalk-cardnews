@@ -10,10 +10,10 @@ POSTALK 백엔드와 같은 Railway 프로젝트 및 환경에 Docker 서비스�
 | --- | --- |
 | `SUPABASE_URL` | 백엔드와 같은 Supabase 프로젝트 URL |
 | `CARDNEWS_INTERNAL_API_KEY` | 백엔드와 동일한 비밀 값 |
-| `OPENAI_API_KEY` | 사진 분석과 문구 생성을 위한 서버 키 |
+| `OPENAI_API_KEY` | 선택. 사진 분석과 문구 생성을 위한 서버 키 |
 | `PORT` | 예시 `8000` |
 
-상태 확인은 `GET /healthz`입니다. 응답에는 서비스 이름과 현재 미디어 저장소(`supabase`)가 포함됩니다. 백엔드는 `POST /cardnews/renders`에 작업 ID, 테마, 가게 정보, 역할별 다운로드 URL 6개, PNG 업로드 URL 3개를 보냅니다. 백엔드가 서명 URL을 발급하고 최종 결과를 보관함에 등록합니다.
+상태 확인은 `GET /healthz`입니다. 응답에는 서비스 이름과 현재 미디어 저장소(`supabase`)가 포함됩니다. 백엔드는 `POST /cardnews/renders`에 작업 ID, 테마, 가게·메뉴 정보, 역할별 다운로드 URL 6개, PNG 업로드 URL 4개를 보냅니다. 백엔드가 서명 URL을 발급하고 최종 결과를 보관함에 등록합니다.
 
 백엔드와 이 서비스 사이의 전체 요청 흐름과 배포 점검 순서는 [POSTALK 백엔드 연동 안내](docs/backend-integration.md)에 정리했습니다.
 
@@ -36,7 +36,12 @@ POSTALK 백엔드와 같은 Railway 프로젝트 및 환경에 Docker 서비스�
   "area": "시장 또는 지역",
   "menu_name": "대표 메뉴",
   "store_description": "가게 소개",
+  "store_address": "가게 주소",
   "menus": ["대표 메뉴", "두 번째 메뉴"],
+  "menu_details": [
+    { "name": "대표 메뉴", "description": "메뉴 설명" },
+    { "name": "두 번째 메뉴" }
+  ],
   "direction": "따뜻한 겨울 조명과 빨간 포인트",
   "photos": [
     { "role": "bowl", "download_url": "Supabase 서명 다운로드 URL" },
@@ -57,6 +62,8 @@ POSTALK 백엔드와 같은 Railway 프로젝트 및 환경에 Docker 서비스�
 
 성공하면 카드별 Storage 경로와 바이트 수, 템플릿 키, 인스타그램 캡션과 해시태그를 반환합니다. 첫 출력은 표지입니다. 이전 백엔드가 업로드 URL 3개를 보내면 본문 3장만 반환합니다.
 
+운영 백엔드는 `Accept: application/x-ndjson`으로 진행 단계와 최종 결과를 받습니다. 아래는 단일 JSON 응답 본문이며 스트리밍에서는 `result` 이벤트 안에 들어갑니다.
+
 ```json
 {
   "cards": [{ "key": "stores/.../generated/job-1.png", "bytes": 123456 }],
@@ -67,7 +74,7 @@ POSTALK 백엔드와 같은 Railway 프로젝트 및 환경에 Docker 서비스�
 }
 ```
 
-`401`은 내부 키 불일치, `400`은 입력 URL·사진 역할·출력 경로 오류, `502`는 렌더링 또는 Storage 전송 실패입니다. 서명 URL과 내부 키는 로그나 클라이언트에 노출하지 않습니다.
+`401`은 내부 키 불일치, `400`은 입력 URL·사진 역할·출력 경로 오류, `422`는 요청 필드 검증 오류, `503`은 서비스 내부 키 미설정입니다. 렌더링 또는 Storage 전송에 실패하면 단일 JSON 모드는 `502`, 스트리밍 모드는 `RENDER_FAILED` 이벤트를 반환합니다. 서명 URL과 내부 키는 로그나 클라이언트에 노출하지 않습니다.
 
 ### 로컬 검증
 
