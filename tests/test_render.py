@@ -140,13 +140,13 @@ class CardNewsRenderTest(unittest.TestCase):
         profile = {"shop_type": "횟집", "main_food": "간장게장"}
         raw = {
             "template": "t1",
-            "copy": {"t1": {"c0": {"sub": "20년째 같은 자리", "t": "간장게장을 만나보세요 . ~~ .."},
+            "copy": {"t1": {"c0": {"sub": "20년째 같은 자리", "t": "간장게장\n만나보세요 . ~~ .."},
                             "c2": {"desc": "모란시장의 횟집"}}},
             "caption": {"hook": "20년째 같은 자리", "body": "간장게장을 만드는 횟집입니다.", "hashtags": ["#횟집"]},
         }
         with patch.object(api.design, "ask_gpt", return_value=(raw, "test-model")):
             style = api.design.make_style(None, "", shop, profile=profile)
-        self.assertEqual(style["copy"]["t1"]["c0"], {"t": "간장게장을 만나보세요."})
+        self.assertEqual(style["copy"]["t1"]["c0"], {"t": "간장게장\n만나보세요."})
         self.assertEqual(style["copy"]["t1"]["c2"], {})
         self.assertNotIn("횟집", str(style["caption"]))
         self.assertNotIn("20년째", style["caption"]["text"])
@@ -159,6 +159,28 @@ class CardNewsRenderTest(unittest.TestCase):
         with patch.object(api.design, "ask_gpt", return_value=(raw, "test-model")):
             style = api.design.make_style(None, "딥네이비 / 크림색", shop)
         self.assertEqual(style["copy"]["t1"]["c0"], {"sub": "간장게장"})
+
+    def test_incomplete_cover_title_uses_menu_fallback(self):
+        shop = {"name": "바다한상", "menu_details": [{"name": "간장게장"}]}
+        for title in ("신선한 꽃게가", "오늘의 메뉴\n신선한 꽃게가", "싱싱한 게\n그리고", "싱싱한 게\n간장게장을 먹으러"):
+            with self.subTest(title=title):
+                raw = {"template": "t3", "copy": {"t3": {"c0": {"t": title, "sub": "대표 메뉴"}}}}
+                with patch.object(api.design, "ask_gpt", return_value=(raw, "test-model")):
+                    style = api.design.make_style(None, "", shop)
+                self.assertEqual(style["copy"]["t3"]["c0"], {"sub": "대표 메뉴"})
+                self.assertEqual(api.design.default_copy(shop)["t3"]["c0"]["t"], "오늘의 메뉴\n간장게장.zip")
+
+    def test_cover_keeps_complete_titles_and_normalizes_model_line_breaks(self):
+        for template, title, expected in (
+            ("t1", "오늘의 메뉴 / 간장게장", "오늘의 메뉴\n간장게장"),
+            ("t3", "골목 맛집\\n한 접시.zip", "골목 맛집\n한 접시.zip"),
+            ("x3", "Cozy\nTable", "Cozy\nTable"),
+        ):
+            with self.subTest(template=template):
+                raw = {"template": template, "copy": {template: {"c0": {"t": title}}}}
+                with patch.object(api.design, "ask_gpt", return_value=(raw, "test-model")):
+                    style = api.design.make_style(None, "", theme="christmas" if template.startswith("x") else "minimal")
+                self.assertEqual(style["copy"][template]["c0"]["t"], expected)
 
     def test_caption_normalizes_punctuation_and_excludes_unconfirmed_hashtags(self):
         shop = {"name": "바다한상", "menus": ["간장게장"]}

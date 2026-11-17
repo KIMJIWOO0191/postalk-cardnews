@@ -132,8 +132,12 @@ def default_copy(shop=None, profile=None):
     })
     area = s['area'] or '우리 동네'
     owner_menu = [str(m).strip() for m in (s.get('menus') or []) if str(m).strip()]
+    if not owner_menu:
+        owner_menu = [m['name'].strip() for m in (s.get('menu_details') or []) if m['name'].strip()]
     lead = owner_menu[0] if owner_menu else (food if p.get('main_food') else '')
-    hook = f'{lead}\n먹으러 가요' if lead else '오늘의\n한 접시'
+    short_lead = lead if len(lead) <= 8 and '\n' not in lead else ''
+    hook = f'오늘의 메뉴\n{short_lead or "한 접시"}'
+    zip_hook = f'오늘의 메뉴\n{short_lead if 0 < len(short_lead) <= 5 else "한 접시"}.zip'
     info = f'{kind} · {lead}' if lead else f'{area}에서 만난 {kind}'
     q, a_ = '오늘 뭐 먹지?', (f'{area} {lead} 어때?' if lead else f'{area} 여기 어때?')
     pop_t = s['name']; pop_s = f'{lead} 먹으러 와요' if lead else f'{area}에서 기다려요'
@@ -141,7 +145,7 @@ def default_copy(shop=None, profile=None):
     covers = {   # 표지(맨 앞 썸네일 카드) = 각 템플릿의 c0. 광고처럼 보이게: 라벨+핀 / 알림·말풍선·필기체 장치 + 큰 제목 + 한 줄 정보
         't1': {**base, 'kicker': 'LOCAL SPOT', 'pop_t': pop_t, 'pop_s': pop_s},
         't2': {**base, 'kicker': '♡ 오늘의 맛집', 'q': q, 'a': a_},
-        't3': {**base, 'kicker': 'LOCAL SPOT', 't': f'{lead} 먹으러\n가는 길.zip' if lead else '오늘의\n한 접시.zip'},
+        't3': {**base, 'kicker': 'LOCAL SPOT', 't': zip_hook},
         't4': {**base, 'kicker': 'LOCAL SPOT', 'script': "Today's\npick"},
         'x1': {**base, 'kicker': 'CHRISTMAS SPOT', 'pop_t': pop_t, 'pop_s': pop_s},
         'x2': {**base, 'kicker': 'DINNER SPOT', 'pop_t': pop_t, 'pop_s': pop_s, 'sub': f'{area}에서 만나는 따뜻한 연말 식탁'},
@@ -426,12 +430,34 @@ def _banned(text, shop=None, profile=None):
     return bool(inferred and inferred not in ('가게', '맛집', '음식점', '식당')
                 and inferred in _claim_text(text) and inferred not in own)
 
+_COVER_LINE_LIMITS = {'t3': 9, 'x3': 10, 'x4': 10}
+_OPEN_TITLE_ENDING = _re.compile(
+    r'(?:[,/:·…-]|(?:^|\s)(?:그리고|또는|함께하는|여기서|이|가|은|는|을|를|의|에|도)'
+    r'|(?:에서|에게|까지는|이지만|하면서|하며|하고|해서|으러|가러|오는|있는|되고)'
+    r'|(?:꽃게|가게|메뉴|음식|요리|국물)[이가은는을를])$'
+)
+
+
+def _cover_title(value, tpl):
+    """템플릿의 두 줄에 들어갈 완성된 제목만 사용한다."""
+    value = value.replace(r'\n', '\n')
+    lines = [_tidy(line, 500) for line in _re.split(r'\n|\s+/\s+', value)]
+    limit = _COVER_LINE_LIMITS.get(tpl, 8)
+    if len(lines) != 2 or any(not line or len(line) > limit for line in lines):
+        return ''
+    if _OPEN_TITLE_ENDING.search(lines[-1].rstrip('.!?')):
+        return ''
+    return '\n'.join(lines)
+
+
 def _clean_copy(tpl, copy, shop, profile):
-    for fields in (copy.get(tpl) or {}).values():
+    for card, fields in (copy.get(tpl) or {}).items():
         if not isinstance(fields, dict):
             continue
         for key, value in list(fields.items()):
             cleaned = _tidy(value, 500)
+            if card == 'c0' and key == 't' and cleaned:
+                cleaned = _cover_title(cleaned, tpl)
             if cleaned and not _banned(cleaned, shop, profile):
                 fields[key] = cleaned
             else:
