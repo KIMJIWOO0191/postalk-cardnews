@@ -299,6 +299,11 @@ def _align_dishes(tpl, copy, profile):
     dep = {'x2': {'n1': ['d1'], 'n2': ['d2'], 'n3': ['d3']}, 'x4': {'n1': ['d1'], 'n2': ['d2'], 'n3': ['d3']},
            'x3': {'name': ['nameen', 'desc'], 'n1': ['e1'], 'n2': ['e2']}}.get(tpl, {})
     c = copy.setdefault(tpl, {})
+    if tpl == 't2':   # 폴라로이드 4칸: 음식 사진(food1/food2)엔 그 음식 이름, 가게 사진(store1/store2)엔 음식 이름이 아니라 가게 문구만
+        d = c.setdefault('c3', {})
+        for slot, role in (('p1', 'food1'), ('p3', 'food2')):
+            if dish.get(role): d[slot] = dish[role]
+        d['p2'], d['p4'] = '우리 가게 ✧', '편안한 공간'
     for card, mp in slots.items():
         for slot, role in mp.items():
             if not dish.get(role): continue
@@ -464,6 +469,18 @@ def _clean_copy(tpl, copy, shop, profile):
                 fields.pop(key)
     return copy
 
+def apply_owner_menus(profile, menus):
+    """사장님이 입력한 메뉴 순서 = 사진 순서(bowl·zoom=1번째, food1=2번째, food2=3번째). 사진 인식보다 사장님 말을 우선."""
+    menus = [str(m).strip()[:10] for m in (menus or []) if m and str(m).strip()]
+    if not menus:
+        return profile
+    dish = dict((profile or {}).get('dish') or {})
+    dish['bowl'] = dish['zoom'] = menus[0]
+    if len(menus) > 1: dish['food1'] = menus[1]
+    if len(menus) > 2: dish['food2'] = menus[2]
+    return {**(profile or {}), 'dish': dish, 'main_food': menus[0]}
+
+
 def make_style(client, text, shop=None, models=None, profile=None, force=None, theme='minimal'):
     """반환: {'template','default','copy','vars','summary_ko','keywords_ko','fallback'}.
     theme = 'minimal' | 'christmas' (사용자가 고른 테마). 말이 비어도 GPT 를 불러요 (사진에서 알아낸 음식에 맞는 문구가 필요하니까).
@@ -484,5 +501,9 @@ def make_style(client, text, shop=None, models=None, profile=None, force=None, t
     copy = {tpl: (raw.get('copy') or {}).get(tpl) or {}}
     copy = _no_meta(tpl, _english_only(tpl, copy))
     copy = _clean_copy(tpl, _align_dishes(tpl, copy, profile), shop, profile)
+    s_ = {**SHOP, **(shop or {})}
+    blind = not ((profile or {}).get('dish') or s_.get('menus'))   # 사진 인식 실패 + 사장님 메뉴 입력도 없음: GPT 가 메뉴 이름·가게 설명을 지어내지 못하게 기본 문구만
+    if blind:
+        copy = {tpl: {}}
     return {'fallback': False, 'template': tpl, 'default': bool(raw.get('default')) and not force, 'copy': copy, 'vars': v,
-            'summary_ko': str(raw.get('summary_ko') or '')[:40], 'keywords_ko': [str(k)[:12] for k in (raw.get('keywords_ko') or [])][:4], 'caption': clean_caption(raw.get('caption'), shop, profile, theme), 'model': used}
+            'summary_ko': str(raw.get('summary_ko') or '')[:40], 'keywords_ko': [str(k)[:12] for k in (raw.get('keywords_ko') or [])][:4], 'caption': default_caption(shop, profile, theme) if blind else clean_caption(raw.get('caption'), shop, profile, theme), 'model': used}

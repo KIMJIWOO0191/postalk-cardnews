@@ -100,10 +100,11 @@ def build_style(body: RenderRequest, photos: dict, shop: dict) -> tuple[dict, di
                 "caption": design.default_caption(shop, profile, body.theme)}
     if not os.environ.get("OPENAI_API_KEY"):
         return profile, fallback()
-    with OpenAI(timeout=15.0, max_retries=0) as client:
+    with OpenAI(timeout=60.0, max_retries=1) as client:   # 사진 6장 분석은 20~40초 걸려요 (15초면 조용히 실패해 GPT 가 메뉴를 지어냄)
         detected = design.analyze_photos(client, photos, shop)
         if not detected.get("error"):
             profile = {**detected, "main_food": body.menu_name or detected.get("main_food", "")}
+        profile = design.apply_owner_menus(profile, body.menus)
         try:
             return profile, design.make_style(client, body.direction, shop, profile=profile, theme=body.theme)
         except (TypeError, AttributeError, ValueError):
