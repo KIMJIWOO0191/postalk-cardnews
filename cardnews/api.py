@@ -94,19 +94,22 @@ def download_image(client: httpx.Client, url: str, path: Path) -> None:
 
 
 def build_style(body: RenderRequest, photos: dict, shop: dict) -> tuple[dict, dict]:
-    profile = {"main_food": body.menu_name}
+    owner_menus = design._owner_menu_names({"menus": body.menus, "menu_details": [menu.model_dump() for menu in body.menu_details]})
+    owner_menus = owner_menus or ([body.menu_name.strip()] if body.menu_name.strip() else [])
+    profile = design.apply_owner_menus({"main_food": body.menu_name}, owner_menus)
     def fallback():
         return {"template": design.THEMES[body.theme]["default"], "fallback": True,
                 "caption": design.default_caption(shop, profile, body.theme)}
     if not os.environ.get("OPENAI_API_KEY"):
         return profile, fallback()
-    with OpenAI(timeout=60.0, max_retries=1) as client:   # 사진 6장 분석은 20~40초 걸려요 (15초면 조용히 실패해 GPT 가 메뉴를 지어냄)
-        detected = design.analyze_photos(client, photos, shop)
+    # One 60s attempt per stage leaves room inside the backend's 180s deadline.
+    with OpenAI(timeout=60.0, max_retries=0) as client:
+        detected = design.analyze_photos(client, photos, shop, models=design.MODELS[:1])
         if not detected.get("error"):
             profile = {**detected, "main_food": body.menu_name or detected.get("main_food", "")}
-        profile = design.apply_owner_menus(profile, body.menus)
+        profile = design.apply_owner_menus(profile, owner_menus)
         try:
-            return profile, design.make_style(client, body.direction, shop, profile=profile, theme=body.theme)
+            return profile, design.make_style(client, body.direction, shop, profile=profile, theme=body.theme, models=design.MODELS[:1])
         except (TypeError, AttributeError, ValueError):
             return profile, fallback()
 

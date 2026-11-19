@@ -179,7 +179,7 @@ class CardNewsRenderTest(unittest.TestCase):
             with self.subTest(template=template):
                 raw = {"template": template, "copy": {template: {"c0": {"t": title}}}}
                 with patch.object(api.design, "ask_gpt", return_value=(raw, "test-model")):
-                    style = api.design.make_style(None, "", theme="christmas" if template.startswith("x") else "minimal")
+                    style = api.design.make_style(None, "", {"name": "가게", "menus": ["간장게장"]}, theme="christmas" if template.startswith("x") else "minimal")
                 self.assertEqual(style["copy"][template]["c0"]["t"], expected)
 
     def test_caption_normalizes_punctuation_and_excludes_unconfirmed_hashtags(self):

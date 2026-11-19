@@ -83,11 +83,12 @@ ACCENTS = {   # 템플릿 -> (GPT가 답하는 키, {이름: CSS 변수들})
 def default_copy(shop=None, profile=None):
     """GPT 가 못 쓸 때의 안전한 기본 문구. 특정 음식/디저트를 단정하지 않아요 (profile 에서 알아낸 것만 사용)."""
     s = {**SHOP, **(shop or {})}
-    p = profile or {}
+    p = apply_owner_menus(profile or {}, _owner_menu_names(shop))
     food = p.get('main_food') or '대표 메뉴'
     shop_type = p.get('shop_type') or ''
     kind = shop_type if shop_type and not _banned(shop_type, s, p) else '가게'
-    f1, f2 = p.get('food1') or '오늘의 메뉴', p.get('food2') or '인기 메뉴'
+    dish = p.get('dish') or {}
+    f1, f2 = dish.get('food1') or p.get('food1') or '오늘의 메뉴', dish.get('food2') or p.get('food2') or '메뉴 사진'
     menu = []
     for m in [food if p.get('main_food') else '', f1 if p.get('food1') else '', f2 if p.get('food2') else ''] + list(p.get('menu_items') or []):
         if m and m not in menu: menu.append(m)
@@ -303,11 +304,14 @@ def _align_dishes(tpl, copy, profile):
         d = c.setdefault('c3', {})
         for slot, role in (('p1', 'food1'), ('p3', 'food2')):
             if dish.get(role): d[slot] = dish[role]
+            else: d.pop(slot, None)
         d['p2'], d['p4'] = '우리 가게 ✧', '편안한 공간'
     for card, mp in slots.items():
         for slot, role in mp.items():
-            if not dish.get(role): continue
             d = c.setdefault(card, {})
+            if not dish.get(role):
+                for key in [slot] + dep.get(slot, []): d.pop(key, None)
+                continue
             if str(d.get(slot) or '').strip() != dish[role]:      # GPT가 다른 음식을 썼다면 그 이름에 딸린 설명도 어긋나므로 기본 문구로
                 for k in dep.get(slot, []): d.pop(k, None)
             d[slot] = dish[role]
@@ -469,6 +473,14 @@ def _clean_copy(tpl, copy, shop, profile):
                 fields.pop(key)
     return copy
 
+def _owner_menu_names(shop=None):
+    s = shop or {}
+    names = [str(name).strip() for name in (s.get('menus') or []) if str(name).strip()]
+    if not names:
+        names = [str(menu.get('name') or '').strip() for menu in (s.get('menu_details') or []) if isinstance(menu, dict)]
+    return [name for name in names if name][:3]
+
+
 def apply_owner_menus(profile, menus):
     """사장님이 입력한 메뉴 순서 = 사진 순서(bowl·zoom=1번째, food1=2번째, food2=3번째). 사진 인식보다 사장님 말을 우선."""
     menus = [str(m).strip()[:10] for m in (menus or []) if m and str(m).strip()]
@@ -478,15 +490,21 @@ def apply_owner_menus(profile, menus):
     dish['bowl'] = dish['zoom'] = menus[0]
     if len(menus) > 1: dish['food1'] = menus[1]
     if len(menus) > 2: dish['food2'] = menus[2]
-    return {**(profile or {}), 'dish': dish, 'main_food': menus[0]}
+    result = {**(profile or {}), 'dish': dish, 'main_food': menus[0]}
+    for role in ('food1', 'food2'):
+        if dish.get(role): result[role] = dish[role]
+    return result
 
 
 def make_style(client, text, shop=None, models=None, profile=None, force=None, theme='minimal'):
     """반환: {'template','default','copy','vars','summary_ko','keywords_ko','fallback'}.
-    theme = 'minimal' | 'christmas' (사용자가 고른 테마). 말이 비어도 GPT 를 불러요 (사진에서 알아낸 음식에 맞는 문구가 필요하니까).
+    theme = 'minimal' | 'christmas'. 입력 메뉴나 확인된 사진별 음식이 없으면 기본 문구를 사용한다.
     force='t2' 처럼 주면 템플릿을 고정."""
     th = THEMES[theme]
+    profile = apply_owner_menus(profile or {}, _owner_menu_names(shop))
     fb = lambda **k: {'fallback': True, 'template': force or th['default'], 'default': True, 'copy': {}, 'vars': {}, 'summary_ko': f'기본 디자인({TEMPLATES[force or th["default"]]["name"]})', 'keywords_ko': [], 'caption': default_caption(shop, profile, theme), **k}
+    if not any(str(value or '').strip() for value in (profile.get('dish') or {}).values()) and not _owner_menu_names(shop):
+        return fb(copy={force or th['default']: {}})
     try:
         raw, used = ask_gpt(client, text, shop, models, profile, force, theme)
     except Exception as e:
@@ -501,9 +519,5 @@ def make_style(client, text, shop=None, models=None, profile=None, force=None, t
     copy = {tpl: (raw.get('copy') or {}).get(tpl) or {}}
     copy = _no_meta(tpl, _english_only(tpl, copy))
     copy = _clean_copy(tpl, _align_dishes(tpl, copy, profile), shop, profile)
-    s_ = {**SHOP, **(shop or {})}
-    blind = not ((profile or {}).get('dish') or s_.get('menus'))   # 사진 인식 실패 + 사장님 메뉴 입력도 없음: GPT 가 메뉴 이름·가게 설명을 지어내지 못하게 기본 문구만
-    if blind:
-        copy = {tpl: {}}
     return {'fallback': False, 'template': tpl, 'default': bool(raw.get('default')) and not force, 'copy': copy, 'vars': v,
-            'summary_ko': str(raw.get('summary_ko') or '')[:40], 'keywords_ko': [str(k)[:12] for k in (raw.get('keywords_ko') or [])][:4], 'caption': default_caption(shop, profile, theme) if blind else clean_caption(raw.get('caption'), shop, profile, theme), 'model': used}
+            'summary_ko': str(raw.get('summary_ko') or '')[:40], 'keywords_ko': [str(k)[:12] for k in (raw.get('keywords_ko') or [])][:4], 'caption': clean_caption(raw.get('caption'), shop, profile, theme), 'model': used}

@@ -126,3 +126,5 @@ python -m unittest discover -s tests
 이 서비스는 PNG 카드 4장을 만들고 Supabase에 업로드합니다. Instagram 게시를 위해 JPEG 사본을 준비하고 캐러셀 자식 컨테이너 4개와 부모 컨테이너를 생성하는 일은 백엔드가 담당합니다. 프론트는 공개 POSTALK 게시 API에서 실제 published 상태와 permalink를 확인합니다. 생성 복구 활성화만으로 Instagram 게시 동기화가 활성화되지 않습니다.
 
 현재 운영 설정과 게시 검증 기록은 [백엔드 운영 문서](https://github.com/Superkid0714/Postalk_backend/blob/main/docs/OPERATIONS.md)를 참고합니다.
+
+사진별 메뉴 순서와 인식 실패 시 기본 라벨, OpenAI 호출 시간 정책은 [사진 라벨과 입력 메뉴 우선순위](../README.md#사진-라벨과-입력-메뉴-우선순위)를 참고합니다. API 필드 형식은 유지하며 사진 역할과 입력 메뉴의 순서를 일치시켜 전달합니다.
